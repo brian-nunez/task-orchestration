@@ -13,7 +13,7 @@ type LoggerTask struct {
 	Delay    time.Duration
 }
 
-func (task *LoggerTask) Process(taskContext worker.ProcessContext) error {
+func (task *LoggerTask) Process(taskContext *worker.ProcessContext) error {
 	time.Sleep(task.Delay)
 	taskContext.Logger(fmt.Sprintf("[%s]: %s\n", task.LogLevel, task.Text))
 

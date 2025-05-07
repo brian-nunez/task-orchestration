@@ -20,7 +20,7 @@ type ProcessContext struct {
 
 func (ctx *ProcessContext) Logger(message any) {
 	content := fmt.Sprintf("[WORKER %d]: %v\n", ctx.WorkerId, message)
-	fmt.Printf(content)
+	// fmt.Printf(content)
 
 	_ = ctx.WriteToLogFile(content)
 }
@@ -45,10 +45,34 @@ type Task interface {
 }
 
 type WorkerPool struct {
-	Tasks      []Task
 	Concurreny int
 	tasksChan  chan Task
 	wg         sync.WaitGroup
+	doneChan   chan struct{}
+}
+
+func (wp *WorkerPool) Start() {
+	wp.tasksChan = make(chan Task)
+	wp.doneChan = make(chan struct{})
+
+	for i := 0; i < wp.Concurreny; i++ {
+		go wp.worker(i)
+	}
+}
+
+func (wp *WorkerPool) AddTask(task Task) {
+	wp.wg.Add(1)
+	wp.tasksChan <- task
+}
+
+func (wp *WorkerPool) Stop() {
+	close(wp.tasksChan)
+	wp.wg.Wait()
+	close(wp.doneChan)
+}
+
+func (wp *WorkerPool) Wait() {
+	wp.wg.Wait()
 }
 
 func (wp *WorkerPool) worker(workerId int) {
@@ -64,7 +88,8 @@ func (wp *WorkerPool) worker(workerId int) {
 		file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			ctx.Logger(fmt.Sprintf("Error opening log file: %v", err.Error()))
-			return
+			wp.wg.Done()
+			continue
 		}
 
 		ctx.Stdout = file
@@ -78,11 +103,11 @@ func (wp *WorkerPool) worker(workerId int) {
 		} else {
 			ctx.Logger("Task completed successfully\n")
 		}
+		file.Close()
 		wp.wg.Done()
-		defer file.Close()
+		fmt.Printf("Worker %d finished\n", workerId)
 	}
 
-	fmt.Printf("Worker %d finished\n", workerId)
 }
 
 func (wp *WorkerPool) Run() {
@@ -92,10 +117,10 @@ func (wp *WorkerPool) Run() {
 		go wp.worker(i)
 	}
 
-	wp.wg.Add(len(wp.Tasks))
-	for _, task := range wp.Tasks {
-		wp.tasksChan <- task
-	}
+	// wp.wg.Add(len(wp.Tasks))
+	// for _, task := range wp.Tasks {
+	// 	wp.tasksChan <- task
+	// }
 	close(wp.tasksChan)
 
 	wp.wg.Wait()
