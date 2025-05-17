@@ -1,7 +1,7 @@
 all: run
 
 run:
-	go run .
+	go run ./cmd/
 
 build:
-	go build -o app .
+	go build -o app ./cmd/

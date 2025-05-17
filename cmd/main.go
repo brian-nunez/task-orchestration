@@ -5,22 +5,23 @@ import (
 	"math/rand"
 	"time"
 
+	worker "github.com/brian-nunez/task-orchestration"
 	"github.com/brian-nunez/task-orchestration/tasks"
-	"github.com/brian-nunez/task-orchestration/worker"
 )
 
 func main() {
 	pool := worker.WorkerPool{
-		Concurreny: 5,
+		Concurreny: 10,
+		LogPath:    "logs",
 	}
 
 	pool.Start()
 
 	for i := 0; i < 20; i++ {
-		timeToWait := time.Duration(rand.Intn(5) + 1)
+		timeToWait := time.Duration(rand.Intn(5)+1) * time.Second
 		task := &tasks.LoggerTask{
 			Text:     fmt.Sprintf("Task %d -- Time to Wait %v", i, timeToWait),
-			Delay:    time.Second * timeToWait,
+			Delay:    timeToWait,
 			LogLevel: "INFO",
 		}
 		pool.AddTask(task)
@@ -35,6 +36,4 @@ func main() {
 
 	pool.Wait()
 	pool.Stop()
-
-	// pool.Run()
 }

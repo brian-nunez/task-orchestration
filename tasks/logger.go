@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/brian-nunez/task-orchestration/worker"
+	worker "github.com/brian-nunez/task-orchestration"
 )
 
 type LoggerTask struct {
@@ -14,6 +14,7 @@ type LoggerTask struct {
 }
 
 func (task *LoggerTask) Process(taskContext *worker.ProcessContext) error {
+	fmt.Printf("Delaying for %v\n", task.Delay)
 	time.Sleep(task.Delay)
 	taskContext.Logger(fmt.Sprintf("[%s]: %s\n", task.LogLevel, task.Text))
 
