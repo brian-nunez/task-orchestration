@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/brian-nunez/task-orchestration/worker"
+	worker "github.com/brian-nunez/task-orchestration"
 )
 
 type M3U8Task struct {
