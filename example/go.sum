@@ -1,0 +1,4 @@
+github.com/brian-nunez/task-orchestration v0.0.1 h1:EoAqZ4dsXHkyvMnDbuw7/okqQd3qnynzi16/uJB4Erc=
+github.com/brian-nunez/task-orchestration v0.0.1/go.mod h1:mEO5su7wed7FJ9RiswfaUWgrgSOeBXV/sLKUay02Duc=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
