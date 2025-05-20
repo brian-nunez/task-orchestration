@@ -25,7 +25,7 @@ type WorkerPool struct {
 	tasksChan    chan TaskNode
 	wg           sync.WaitGroup
 	doneChan     chan struct{}
-	databasePath string
+	DatabasePath string
 	state        *state.State
 }
 
@@ -35,7 +35,7 @@ func (wp *WorkerPool) Start() error {
 
 	wp.state = &state.State{}
 	err := wp.state.ConnectDB(state.ConnectDBParams{
-		DBPath: wp.databasePath,
+		DBPath: wp.DatabasePath,
 	})
 	if err != nil {
 		return err
@@ -104,9 +104,10 @@ func (wp *WorkerPool) worker(workerId int) {
 		})
 
 		ctx.Logger("Starting task\n")
-		err = taskNode.task.Process(ctx)
+		err = ctx.SafeProcess(taskNode.task)
+		// err = taskNode.task.Process(ctx)
 		if err != nil {
-			fmt.Printf("[%v]: Error processing task: %v\n", ctx.ProcessId, err.Error())
+			ctx.Logger(fmt.Sprintf("[%v]: Error processing task: %v\n", ctx.ProcessId, err.Error()))
 			wp.state.TaskFailed(state.TaskFailedParams{
 				ProcessID:    ctx.ProcessId,
 				ErrorMessage: err.Error(),
@@ -119,7 +120,7 @@ func (wp *WorkerPool) worker(workerId int) {
 		}
 		file.Close()
 		wp.wg.Done()
-		fmt.Printf("Worker %d finished\n", workerId)
+		ctx.Logger(fmt.Sprintf("Worker %d finished\n", workerId))
 	}
 }
 
