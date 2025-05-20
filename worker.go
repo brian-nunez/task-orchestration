@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/brian-nunez/task-orchestration/state"
 	"github.com/google/uuid"
 )
 
@@ -13,26 +14,50 @@ type Task interface {
 	Process(taskContext *ProcessContext) error
 }
 
-type WorkerPool struct {
-	Concurreny int
-	LogPath    string
-	tasksChan  chan Task
-	wg         sync.WaitGroup
-	doneChan   chan struct{}
+type TaskNode struct {
+	task      Task
+	processId string
 }
 
-func (wp *WorkerPool) Start() {
-	wp.tasksChan = make(chan Task)
+type WorkerPool struct {
+	Concurreny   int
+	LogPath      string
+	tasksChan    chan TaskNode
+	wg           sync.WaitGroup
+	doneChan     chan struct{}
+	databasePath string
+	state        *state.State
+}
+
+func (wp *WorkerPool) Start() error {
+	wp.tasksChan = make(chan TaskNode)
 	wp.doneChan = make(chan struct{})
+
+	wp.state = &state.State{}
+	err := wp.state.ConnectDB(state.ConnectDBParams{
+		DBPath: wp.databasePath,
+	})
+	if err != nil {
+		return err
+	}
 
 	for i := 0; i < wp.Concurreny; i++ {
 		go wp.worker(i)
 	}
+
+	return nil
 }
 
 func (wp *WorkerPool) AddTask(task Task) {
+	taskNode := TaskNode{
+		task:      task,
+		processId: uuid.NewString(),
+	}
 	wp.wg.Add(1)
-	wp.tasksChan <- task
+	wp.tasksChan <- taskNode
+	wp.state.CreateSingleTask(state.CreateSingleTaskParams{
+		ProcessId: taskNode.processId,
+	})
 }
 
 func (wp *WorkerPool) Stop() {
@@ -46,14 +71,17 @@ func (wp *WorkerPool) Wait() {
 }
 
 func (wp *WorkerPool) worker(workerId int) {
-	for task := range wp.tasksChan {
-		if wp.LogPath == "" {
-			wp.LogPath = "logs"
+	for taskNode := range wp.tasksChan {
+		err := wp.setLogPath(wp.LogPath)
+		if err != nil {
+			fmt.Printf("Error setting log path: %v\n", err.Error())
+			wp.wg.Done()
+			return
 		}
 
 		ctx := &ProcessContext{
 			WorkerId:  workerId,
-			ProcessId: uuid.NewString(),
+			ProcessId: taskNode.processId,
 			LogPath:   wp.LogPath,
 		}
 
@@ -70,15 +98,42 @@ func (wp *WorkerPool) worker(workerId int) {
 		ctx.Stderr = file
 		ctx.Stdin = file
 
+		wp.state.TaskQueued(state.TaskQueuedParams{
+			ProcessID: taskNode.processId,
+			LogPath:   filepath,
+		})
+
 		ctx.Logger("Starting task\n")
-		err = task.Process(ctx)
+		err = taskNode.task.Process(ctx)
 		if err != nil {
 			fmt.Printf("[%v]: Error processing task: %v\n", ctx.ProcessId, err.Error())
+			wp.state.TaskFailed(state.TaskFailedParams{
+				ProcessID:    ctx.ProcessId,
+				ErrorMessage: err.Error(),
+			})
 		} else {
 			ctx.Logger("Task completed successfully\n")
+			wp.state.TaskCompleted(state.TaskCompletedParams{
+				ProcessID: ctx.ProcessId,
+			})
 		}
 		file.Close()
 		wp.wg.Done()
 		fmt.Printf("Worker %d finished\n", workerId)
 	}
+}
+
+func (wp *WorkerPool) setLogPath(path string) error {
+	if path != "" {
+		wp.LogPath = path
+	} else {
+		wp.LogPath = "logs"
+	}
+
+	err := os.MkdirAll(wp.LogPath, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

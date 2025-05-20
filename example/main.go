@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	worker "github.com/brian-nunez/task-orchestration"
+	// "github.com/brian-nunez/task-orchestration/state"
 )
 
 type PrintTask struct {
@@ -16,6 +17,24 @@ func (p *PrintTask) Process(ctx *worker.ProcessContext) error {
 }
 
 func main() {
+	// machine := &state.State{}
+	//
+	// machine.ConnectDB(state.ConnectDBParams{
+	// 	DBPath: ":memory:",
+	// })
+	//
+	// machine.CreateSingleTask(state.CreateSingleTaskParams{
+	// 	ProcessId: "1",
+	// })
+	//
+	// task, err := machine.GetTaskByProcessID(state.GetTaskByProcessIDParams{
+	// 	ProcessId: "1",
+	// })
+	// fmt.Println(machine)
+	// fmt.Println(task, err)
+	//
+	// return
+
 	pool := &worker.WorkerPool{
 		Concurreny: 10,
 		LogPath:    "logs",
