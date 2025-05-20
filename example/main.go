@@ -16,37 +16,60 @@ func (p *PrintTask) Process(ctx *worker.ProcessContext) error {
 	return nil
 }
 
-func main() {
-	// machine := &state.State{}
-	//
-	// machine.ConnectDB(state.ConnectDBParams{
-	// 	DBPath: ":memory:",
-	// })
-	//
-	// machine.CreateSingleTask(state.CreateSingleTaskParams{
-	// 	ProcessId: "1",
-	// })
-	//
-	// task, err := machine.GetTaskByProcessID(state.GetTaskByProcessIDParams{
-	// 	ProcessId: "1",
-	// })
-	// fmt.Println(machine)
-	// fmt.Println(task, err)
-	//
-	// return
+type ErrorTask struct {
+	Message string
+}
 
+func (p *ErrorTask) Process(ctx *worker.ProcessContext) error {
+	ctx.Logger(p.Message)
+	return fmt.Errorf("error processing task %v %v", p.Message, ctx.ProcessId)
+}
+
+type PanicTask struct {
+	Message string
+}
+
+func (p *PanicTask) Process(ctx *worker.ProcessContext) error {
+	ctx.Logger(p.Message)
+
+	panic("panic in task")
+
+	return nil
+}
+
+func main() {
 	pool := &worker.WorkerPool{
-		Concurreny: 10,
-		LogPath:    "logs",
+		Concurreny:   10,
+		LogPath:      "logs",
+		DatabasePath: "./tasks.db",
 	}
 
 	pool.Start()
 	defer pool.Stop()
 
 	for i := 0; i < 200; i++ {
+		if i == 160 {
+			task := &PanicTask{
+				Message: fmt.Sprintf("Task %d", i),
+			}
+
+			pool.AddTask(task)
+
+			continue
+		}
+		if i%30 == 0 {
+			task := &ErrorTask{
+				Message: fmt.Sprintf("Task %d", i),
+			}
+
+			pool.AddTask(task)
+
+			continue
+		}
 		task := &PrintTask{
 			Message: fmt.Sprintf("Task %d", i),
 		}
+
 		pool.AddTask(task)
 	}
 

@@ -36,3 +36,16 @@ func (ctx *ProcessContext) WriteToLogFile(content string) error {
 
 	return nil
 }
+
+func (ctx *ProcessContext) SafeProcess(task Task) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic during task execution: %v", r)
+			ctx.Logger(err)
+		}
+	}()
+
+	err = task.Process(ctx)
+
+	return err
+}

@@ -50,7 +50,7 @@ type ConnectDBParams struct {
 
 func (s *State) ConnectDB(params ConnectDBParams) error {
 	if params.DBPath == "" {
-		params.DBPath = "./tasks.db"
+		params.DBPath = ":memory:"
 	}
 
 	s.dbPath = params.DBPath
