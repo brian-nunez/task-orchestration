@@ -76,7 +76,7 @@ func (s *State) ConnectDB(params ConnectDBParams) error {
 	return nil
 }
 
-func (s *State) GetAllTasks() ([]storage.Task, error) {
+func (s *State) GetAllTasks() (*[]storage.Task, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	ctx := context.Background()
@@ -86,7 +86,7 @@ func (s *State) GetAllTasks() ([]storage.Task, error) {
 		return nil, err
 	}
 
-	return tasks, nil
+	return &tasks, nil
 }
 
 func (s *State) GetQueuedTasks() (*[]storage.Task, error) {

@@ -180,18 +180,18 @@ func mapTaskToInfo(task storage.Task) TaskInfo {
 	}
 }
 
-func (wp *WorkerPool) GetAllTasks() ([]TaskInfo, error) {
+func (wp *WorkerPool) GetAllTasks() (*[]TaskInfo, error) {
 	raw, err := wp.state.GetAllTasks()
 	if err != nil {
 		return nil, err
 	}
 
-	out := make([]TaskInfo, len(raw))
-	for i, t := range raw {
+	out := make([]TaskInfo, len(*raw))
+	for i, t := range *raw {
 		out[i] = mapTaskToInfo(t)
 	}
 
-	return out, nil
+	return &out, nil
 }
 
 func (wp *WorkerPool) GetCompletedTasks() (*[]TaskInfo, error) {
