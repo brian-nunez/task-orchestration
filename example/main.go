@@ -73,7 +73,7 @@ func main() {
 		pool.AddTask(task)
 	}
 
-	tasks, err := pool.GetCompletedTasks()
+	tasks, err := pool.GetAllTasks()
 
 	fmt.Println("Finished for loop", tasks, err)
 
