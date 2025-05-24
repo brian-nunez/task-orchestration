@@ -49,16 +49,23 @@ func (wp *WorkerPool) Start() error {
 	return nil
 }
 
-func (wp *WorkerPool) AddTask(task Task) {
+func (wp *WorkerPool) AddTask(task Task) (*TaskInfo, error) {
 	taskNode := TaskNode{
 		task:      task,
 		processId: uuid.NewString(),
 	}
 	wp.wg.Add(1)
 	wp.tasksChan <- taskNode
-	wp.state.CreateSingleTask(state.CreateSingleTaskParams{
+	t, err := wp.state.CreateSingleTask(state.CreateSingleTaskParams{
 		ProcessId: taskNode.processId,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	mappedTaskInfo := mapTaskToInfo(*t)
+
+	return &mappedTaskInfo, nil
 }
 
 func (wp *WorkerPool) Stop() {
