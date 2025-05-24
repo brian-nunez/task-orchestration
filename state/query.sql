@@ -1,3 +1,6 @@
+-- name: GetAllTasks :many
+SELECT * FROM tasks;
+
 -- name: GetTasksByStatus :many
 SELECT * FROM tasks WHERE status = ? ORDER BY updated_at DESC;
 

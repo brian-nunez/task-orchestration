@@ -73,7 +73,9 @@ func main() {
 		pool.AddTask(task)
 	}
 
-	fmt.Println("Finished for loop")
+	tasks, err := pool.GetCompletedTasks()
+
+	fmt.Println("Finished for loop", tasks, err)
 
 	pool.Wait()
 

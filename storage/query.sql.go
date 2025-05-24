@@ -106,6 +106,47 @@ func (q *Queries) FailTask(ctx context.Context, arg FailTaskParams) (Task, error
 	return i, err
 }
 
+const getAllTasks = `-- name: GetAllTasks :many
+SELECT id, type, process_id, log_path, status, retries, max_retries, worker_id, error, created_at, updated_at, started_at, finished_at FROM tasks
+`
+
+func (q *Queries) GetAllTasks(ctx context.Context) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, getAllTasks)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Task
+	for rows.Next() {
+		var i Task
+		if err := rows.Scan(
+			&i.ID,
+			&i.Type,
+			&i.ProcessID,
+			&i.LogPath,
+			&i.Status,
+			&i.Retries,
+			&i.MaxRetries,
+			&i.WorkerID,
+			&i.Error,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.StartedAt,
+			&i.FinishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTaskByProcessId = `-- name: GetTaskByProcessId :one
 SELECT id, type, process_id, log_path, status, retries, max_retries, worker_id, error, created_at, updated_at, started_at, finished_at FROM tasks WHERE process_id = ?
 `
