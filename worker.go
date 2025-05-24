@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/brian-nunez/task-orchestration/state"
+	"github.com/brian-nunez/task-orchestration/storage"
 	"github.com/google/uuid"
 )
 
@@ -137,4 +138,114 @@ func (wp *WorkerPool) setLogPath(path string) error {
 	}
 
 	return nil
+}
+
+type TaskInfo struct {
+	ProcessID  string  `json:"processId"`
+	Status     string  `json:"status"`
+	LogPath    string  `json:"logPath"`
+	WorkerID   *int    `json:"workderId"`
+	Error      string  `json:"error"`
+	CreatedAt  string  `json:"createdAt"`
+	StartedAt  *string `json:"startedAt"`
+	FinishedAt *string `json:"finishedAt"`
+}
+
+func mapTaskToInfo(task storage.Task) TaskInfo {
+	var workerID *int
+	if task.WorkerID.Valid {
+		val := int(task.WorkerID.Int64)
+		workerID = &val
+	}
+
+	var startedAt, finishedAt *string
+	if task.StartedAt.Valid {
+		s := task.StartedAt.Time.Format("2006-01-02 15:04:05")
+		startedAt = &s
+	}
+	if task.FinishedAt.Valid {
+		s := task.FinishedAt.Time.Format("2006-01-02 15:04:05")
+		finishedAt = &s
+	}
+
+	return TaskInfo{
+		ProcessID:  task.ProcessID.(string),
+		Status:     task.Status,
+		LogPath:    task.LogPath.(string),
+		WorkerID:   workerID,
+		Error:      task.Error.(string),
+		CreatedAt:  task.CreatedAt.Format("2006-01-02 15:04:05"),
+		StartedAt:  startedAt,
+		FinishedAt: finishedAt,
+	}
+}
+
+func (wp *WorkerPool) GetAllTasks() ([]TaskInfo, error) {
+	raw, err := wp.state.GetAllTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]TaskInfo, len(raw))
+	for i, t := range raw {
+		out[i] = mapTaskToInfo(t)
+	}
+
+	return out, nil
+}
+
+func (wp *WorkerPool) GetCompletedTasks() (*[]TaskInfo, error) {
+	raw, err := wp.state.GetCompletedTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]TaskInfo, len(*raw))
+	for i, t := range *raw {
+		out[i] = mapTaskToInfo(t)
+	}
+
+	return &out, nil
+}
+
+func (wp *WorkerPool) GetRunningTasks() (*[]TaskInfo, error) {
+	raw, err := wp.state.GetRunningTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]TaskInfo, len(*raw))
+	for i, t := range *raw {
+		out[i] = mapTaskToInfo(t)
+	}
+
+	return &out, nil
+}
+
+func (wp *WorkerPool) GetPendingTasks() (*[]TaskInfo, error) {
+	raw, err := wp.state.GetQueuedTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]TaskInfo, len(*raw))
+	for i, t := range *raw {
+		out[i] = mapTaskToInfo(t)
+	}
+
+	return &out, nil
+}
+
+func (wp *WorkerPool) GetFailedTasks() (*[]TaskInfo, error) {
+	raw, err := wp.state.GetFailedTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]TaskInfo, len(*raw))
+	for i, t := range *raw {
+		out[i] = mapTaskToInfo(t)
+	}
+
+	return &out, nil
 }
