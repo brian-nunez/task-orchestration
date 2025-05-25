@@ -11,6 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	ErrNoRows = "sql: no rows in result set"
+)
+
 type Task interface {
 	Process(taskContext *ProcessContext) error
 }
@@ -255,4 +259,24 @@ func (wp *WorkerPool) GetFailedTasks() (*[]TaskInfo, error) {
 	}
 
 	return &out, nil
+}
+
+type GetTaskByProcessIdParams struct {
+	ProcessId string
+}
+
+func (wp *WorkerPool) GetTaskByProcessId(params GetTaskByProcessIdParams) (*TaskInfo, error) {
+	task, err := wp.state.GetTaskByProcessID(state.GetTaskByProcessIDParams{
+		ProcessId: params.ProcessId,
+	})
+	if err != nil {
+		if err.Error() == ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	mappedTaskToInfo := mapTaskToInfo(*task)
+
+	return &mappedTaskToInfo, nil
 }
