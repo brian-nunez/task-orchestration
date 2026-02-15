@@ -1,18 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	worker "github.com/brian-nunez/task-orchestration"
-	// "github.com/brian-nunez/task-orchestration/state"
 )
 
 type PrintTask struct {
 	Message string
 }
 
-func (p *PrintTask) Process(ctx *worker.ProcessContext) error {
-	ctx.Logger(p.Message)
+func (p *PrintTask) Process(ctx context.Context, pc *worker.ProcessContext) error {
+	_ = pc.Logger(p.Message)
 	return nil
 }
 
@@ -20,31 +20,32 @@ type ErrorTask struct {
 	Message string
 }
 
-func (p *ErrorTask) Process(ctx *worker.ProcessContext) error {
-	ctx.Logger(p.Message)
-	return fmt.Errorf("error processing task %v %v", p.Message, ctx.ProcessId)
+func (p *ErrorTask) Process(ctx context.Context, pc *worker.ProcessContext) error {
+	_ = pc.Logger(p.Message)
+	return fmt.Errorf("error processing task %v %v", p.Message, pc.ProcessId)
 }
 
 type PanicTask struct {
 	Message string
 }
 
-func (p *PanicTask) Process(ctx *worker.ProcessContext) error {
-	ctx.Logger(p.Message)
+func (p *PanicTask) Process(ctx context.Context, pc *worker.ProcessContext) error {
+	_ = pc.Logger(p.Message)
 
 	panic("panic in task")
-
-	return nil
 }
 
 func main() {
-	pool := &worker.WorkerPool{
-		Concurreny:   10,
+	pool := worker.NewWorkerPool(worker.WorkerPoolConfig{
+		Concurrency:  10,
 		LogPath:      "logs",
 		DatabasePath: "./tasks.db",
-	}
+	})
 
-	pool.Start()
+	err := pool.Start()
+	if err != nil {
+		panic(err)
+	}
 	defer pool.Stop()
 
 	for i := 0; i < 200; i++ {
@@ -53,7 +54,7 @@ func main() {
 				Message: fmt.Sprintf("Task %d", i),
 			}
 
-			pool.AddTask(task)
+			_, _ = pool.AddTask(task)
 
 			continue
 		}
@@ -62,7 +63,7 @@ func main() {
 				Message: fmt.Sprintf("Task %d", i),
 			}
 
-			pool.AddTask(task)
+			_, _ = pool.AddTask(task)
 
 			continue
 		}
@@ -70,16 +71,24 @@ func main() {
 			Message: fmt.Sprintf("Task %d", i),
 		}
 
-		pool.AddTask(task)
+		_, _ = pool.AddTask(task)
 	}
-
-	tasks, err := pool.GetAllTasks()
-
-	fmt.Println("Finished for loop", tasks, err)
 
 	pool.Wait()
 
-	pool.AddTask(&PrintTask{
+	tasks, err := pool.GetAllTasks()
+
+	for _, t := range *tasks {
+		fmt.Printf(
+			"Process ID: %v, Status: %v\n",
+			t.ProcessID,
+			t.Status,
+		)
+	}
+
+	pool.Wait()
+
+	_, _ = pool.AddTask(&PrintTask{
 		Message: "LATER TASK",
 	})
 

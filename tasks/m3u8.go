@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 
@@ -12,8 +13,9 @@ type M3U8Task struct {
 	Output string
 }
 
-func (task *M3U8Task) Process(taskContext *worker.ProcessContext) error {
-	cmd := exec.Command(
+func (task *M3U8Task) Process(ctx context.Context, taskContext *worker.ProcessContext) error {
+	cmd := exec.CommandContext(
+		ctx,
 		"m3u8-cli",
 		"--url",
 		task.URL,
@@ -21,7 +23,7 @@ func (task *M3U8Task) Process(taskContext *worker.ProcessContext) error {
 		task.Output,
 	)
 
-	taskContext.Logger(fmt.Sprintf("Executing command: %v\n", cmd.String()))
+	_ = taskContext.Logger(fmt.Sprintf("Executing command: %v\n", cmd.String()))
 
 	cmd.Stdin = taskContext.Stdin
 	cmd.Stdout = taskContext.Stdout
@@ -29,7 +31,7 @@ func (task *M3U8Task) Process(taskContext *worker.ProcessContext) error {
 
 	err := cmd.Run()
 	if err != nil {
-		taskContext.Logger(fmt.Sprintf("Error executing m3u8-cli: %v", err.Error()))
+		_ = taskContext.Logger(fmt.Sprintf("Error executing m3u8-cli: %v", err.Error()))
 		return err
 	}
 
