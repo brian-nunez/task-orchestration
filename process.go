@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,10 +17,10 @@ type ProcessContext struct {
 	LogPath   string
 }
 
-func (ctx *ProcessContext) Logger(message any) {
+func (ctx *ProcessContext) Logger(message any) error {
 	content := fmt.Sprintf("[WORKER %d]: %v\n", ctx.WorkerId, message)
 
-	_ = ctx.WriteToLogFile(content)
+	return ctx.WriteToLogFile(content)
 }
 
 func (ctx *ProcessContext) WriteToLogFile(content string) error {
@@ -32,20 +33,23 @@ func (ctx *ProcessContext) WriteToLogFile(content string) error {
 	}
 	defer file.Close()
 
-	file.WriteString(content)
+	_, err = file.WriteString(content)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (ctx *ProcessContext) SafeProcess(task Task) (err error) {
+func (pc *ProcessContext) SafeProcess(ctx context.Context, task Task) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic during task execution: %v", r)
-			ctx.Logger(err)
+			_ = pc.Logger(err)
 		}
 	}()
 
-	err = task.Process(ctx)
+	err = task.Process(ctx, pc)
 
 	return err
 }
